@@ -51,7 +51,7 @@ export function Popup() {
   }
 
   async function completeTask(task: Task) {
-    const updated = { ...task, status: 'completed' as const };
+    const updated = { ...task, status: 'completed' as const, snoozeUntil: undefined };
     await saveTask(updated);
     await cancelTaskAlarm(task.id);
     setTasks((current) => current.map((item) => item.id === task.id ? updated : item));
@@ -97,7 +97,7 @@ export function Popup() {
         {activeTasks.length === 0 ? <p className="empty">Nothing scheduled yet. Add your first task above.</p> : (
           <ul>{activeTasks.map((task) => <li key={task.id} className={task.dueAt < Date.now() ? 'overdue' : ''}>
             <button className="check" title="Mark complete" onClick={() => void completeTask(task)}>✓</button>
-            <div className="task-content"><strong>{task.title}</strong><time>{task.dueAt < Date.now() ? 'Overdue · ' : ''}{formatDue(task.dueAt)}</time></div>
+            <div className="task-content"><strong>{task.title}</strong><time>{task.snoozeUntil ? `Repeats every 10 min until ${formatDue(task.snoozeUntil)} · ` : task.dueAt < Date.now() ? 'Overdue · ' : ''}{formatDue(task.dueAt)}</time></div>
             <button className="delete" title="Delete task" onClick={() => void removeTask(task.id)}>×</button>
           </li>)}</ul>
         )}

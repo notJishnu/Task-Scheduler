@@ -6,4 +6,6 @@ export interface Task {
   dueAt: number;
   status: TaskStatus;
   createdAt: number;
+  /** The final reminder time for an active 10-minute snooze sequence. */
+  snoozeUntil?: number;
 }

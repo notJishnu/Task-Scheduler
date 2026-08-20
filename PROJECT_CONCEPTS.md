@@ -149,13 +149,13 @@ The extension also restores active alarms when it is installed, updated, or Chro
 
 ## 10. Notifications and actions
 
-The worker creates a desktop notification for each reminder. The notification provides **Complete** and **Snooze 10 min** actions.
+The worker creates a desktop notification for each reminder. The notification provides **Complete** and **Snooze every 10 min for 1 hour** actions.
 
 When the user chooses an action, `chrome.notifications.onButtonClicked` receives the click:
 
 ```text
 Complete -> mark task completed -> save it -> cancel its alarm
-Snooze -> assign a new time -> save it -> schedule a new alarm
+Snooze -> create a one-hour snooze window -> notify every 10 minutes -> stop after the final reminder
 ```
 
 Chrome notifications require a compatible image, so the project uses PNG icons rather than SVG icons.

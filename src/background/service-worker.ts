@@ -4,6 +4,8 @@ import { getTasks, saveTask } from '../lib/storage';
 // Chrome requires an icon for every notification. A PNG data URL is used so it
 // stays valid in the packaged extension without relying on unsupported SVG icons.
 const NOTIFICATION_ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+const SNOOZE_INTERVAL_MS = 10 * 60 * 1000;
+const SNOOZE_DURATION_MS = 60 * 60 * 1000;
 
 async function showNotification(
   notificationId: string,
@@ -41,8 +43,27 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   await showNotification(`reminder:${task.id}`, 'Task reminder', task.title, [
     { title: 'Complete' },
-    { title: 'Snooze 10 min' },
+    { title: 'Snooze every 10 min for 1 hour' },
   ]);
+
+  // A snooze sequence is scheduled one reminder at a time. This makes it easy
+  // to cancel immediately when the task is completed or deleted.
+  if (task.snoozeUntil && task.dueAt < task.snoozeUntil) {
+    const nextReminderAt = task.dueAt + SNOOZE_INTERVAL_MS;
+    if (nextReminderAt <= task.snoozeUntil) {
+      task.dueAt = nextReminderAt;
+      await saveTask(task);
+      await scheduleTaskAlarm(task);
+      return;
+    }
+  }
+
+  // The final snoozed reminder has fired. Keep the task active so the user can
+  // still complete or delete it, but do not schedule another notification.
+  if (task.snoozeUntil) {
+    task.snoozeUntil = undefined;
+    await saveTask(task);
+  }
 });
 
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
@@ -51,8 +72,14 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   const task = (await getTasks()).find((item) => item.id === taskId);
   if (!task) return;
 
-  if (buttonIndex === 0) task.status = 'completed';
-  else task.dueAt = Date.now() + 10 * 60 * 1000;
+  if (buttonIndex === 0) {
+    task.status = 'completed';
+    task.snoozeUntil = undefined;
+  } else {
+    const snoozeStartedAt = Date.now();
+    task.dueAt = snoozeStartedAt + SNOOZE_INTERVAL_MS;
+    task.snoozeUntil = snoozeStartedAt + SNOOZE_DURATION_MS;
+  }
   await saveTask(task);
   await scheduleTaskAlarm(task);
   await chrome.notifications.clear(notificationId);
